@@ -5,6 +5,7 @@ import sys
 import urllib2
 import urlparse
 from . import conf
+from . import storage
 from Queue import Queue
 from BeautifulSoup import BeautifulSoup
 
@@ -114,6 +115,18 @@ class WebCrawler(object):
 
     def __init__(self, root, depth_limit=None, max_urls_count=None,
                  allowed=[], exclude=[]):
+        """
+        Initialize WebCrawler instance.
+
+        Args:
+            root: A URL string.
+            depth_limit: An integer for the maximum depth to traverse from
+                the root URL node.
+            max_urls_count: An integer for the maximum number of URLs the
+                crawler should discover.
+            allowed: A list of allowed URL prefixes.
+            exclude: A list of excluded URL prefixes.
+        """
         self.set_depth_limit(depth_limit)
         self.set_max_urls_count(max_urls_count)
         self.set_root(root)
@@ -159,6 +172,7 @@ class WebCrawler(object):
         self.urls_queued = set([root])
         self.urls_visited_count = 0
         self.urls_count = 1
+        self.can_dump = True
 
     def clean_url(self, url):
         """
@@ -248,12 +262,6 @@ class WebCrawler(object):
         """
         self.url_fetch.url = url
         urls = self.url_fetch.get_urls()
-        try:
-            self.urls_queued.remove(url)
-        except KeyError:
-            pass
-        self.urls_visited.add(url)
-        self.urls_visited_count += 1
         child_depth = depth + 1
         self.check_depth(child_depth)
         for u in urls:
@@ -261,6 +269,14 @@ class WebCrawler(object):
                 self.queue.put((self.clean_url(u), child_depth))
                 self.urls_queued.add(u)
                 self.urls_count += 1
+        # Only if all the filtered URLs in a page are successfully queued,
+        # then we mark this url as visited.
+        try:
+            self.urls_queued.remove(url)
+        except KeyError:
+            pass
+        self.urls_visited.add(url)
+        self.urls_visited_count += 1
 
     def crawl(self):
         """"
@@ -299,3 +315,50 @@ class WebCrawler(object):
             A iterator of URL strings.
         """
         return iter(self.urls_queued.union(self.urls_visited))
+
+    def reset(self):
+        """
+        Reset crawler data.
+        """
+        self.urls_visited = set()
+        self.urls_queued = set()
+        self.urls_visited_count = 0
+        self.urls_count = 0
+        self.can_dump = False
+
+    def dump(self, storage_backend):
+        """
+        Dump data collected during crawling to a storage backend.
+
+        Args:
+            storage_backend: An instance of
+                'pywebcrawler.storage.BaseStorageBackend' or its subclass.
+        """
+        if self.can_dump:
+            try:
+                storage_backend.dump(
+                    self.urls_visited, self.queue, self.urls_count,
+                    self.urls_visited_count)
+                self.reset()
+            except storage.StorageDumpException as e:
+                print >> sys.stderr, (
+                    "Error during dumping crawler data:\n%s" % unicode(e))
+
+    def load(self, storage_backend):
+        """
+        Load existing crawling data from a storage backend.
+
+        Args:
+            storage_backend: An instance of
+                'pywebcrawler.storage.BaseStorageBackend' or its subclass.
+        """
+        try:
+            (
+                self.urls_visited, self.urls_queued,
+                self.queue, self.urls_count, self.urls_visited_count
+            ) = storage_backend.load()
+            self.can_dump = True
+        except storage.StorageLoadException as e:
+            print >> sys.stderr, (
+                "Error during loading crawler data, so resorting to "
+                "initial data:\n%s" % unicode(e))
