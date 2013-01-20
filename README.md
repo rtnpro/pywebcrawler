@@ -4,7 +4,9 @@ A simple web crawler written in Python.
 
 Installation
 ------------
-`pip install -e git+git://github.com/rtnpro/pywebcrawler.git@master#egg=pywebcrawler`
+1. Clone repository: ``git clone https://github.com/rtnpro/pywebcrawler.git``
+1. Change directory: ``cd pywebcrawler``
+1. Run setup: ``sudo python setup.py develop``
 
 Usage
 -----
