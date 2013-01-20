@@ -136,7 +136,7 @@ class WebCrawler(object):
             max_urls_count: An integer for the maximum number of URLs
                 to discover during crawling.
         """
-        return max_urls_count if max_urls_count is not None \
+        self.max_urls_count = max_urls_count if max_urls_count is not None \
             else conf.MAX_URLS_COUNT
 
     def set_root(self, root):
