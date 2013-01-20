@@ -112,10 +112,13 @@ class WebCrawler(object):
 
     URLFetchClass = UrlFetch
 
-    def __init__(self, root, depth_limit=None, max_urls_count=None):
+    def __init__(self, root, depth_limit=None, max_urls_count=None,
+                 allowed=[], exclude=[]):
         self.set_depth_limit(depth_limit)
         self.set_max_urls_count(max_urls_count)
         self.set_root(root)
+        self.allowed_url_prefixes = allowed or []
+        self.excluded_url_prefixes = exclude or []
 
     def set_depth_limit(self, depth_limit):
         """
@@ -150,7 +153,8 @@ class WebCrawler(object):
         """
         self.queue = Queue()
         self.queue.put((self.clean_url(root), 0))
-        self.url_fetch = self.URLFetchClass(self.clean_url(root))
+        self.root_url = self.clean_url(root)
+        self.url_fetch = self.URLFetchClass(self.root_url)
         self.urls_visited = set()
         self.urls_queued = set([root])
         self.urls_visited_count = 0
@@ -181,6 +185,36 @@ class WebCrawler(object):
                 "Current depth %d from root node is greater than maximum "
                 "allowed depth %d." % (depth, conf.DEPTH_LIMIT))
 
+    def is_url_prefix_allowed(self, url):
+        """
+        Check if url prefix is allowed.
+
+        Args:
+            url: A URL string.
+
+        Returns:
+            A boolean.
+        """
+        for prefix in self.allowed_url_prefixes:
+            if not url.startswith(prefix):
+                return False
+        return True
+
+    def is_url_prefix_excluded(self, url):
+        """
+        Check if url prefix is excluded.
+
+        Args:
+            url: A URL string.
+
+        Returns:
+            A boolean.
+        """
+        for prefix in self.excluded_url_prefixes:
+            if url.startswith(prefix):
+                return True
+        return False
+
     def should_queue_url(self, url):
         """
         Whether should queue a url.
@@ -195,6 +229,8 @@ class WebCrawler(object):
             raise StopCrawlingException(
                 "Already found %d URLs." % self.max_urls_count)
         return (
+            self.is_url_prefix_allowed(url) and
+            not self.is_url_prefix_excluded(url) and
             url not in self.urls_visited and
             url not in self.urls_queued
         )
