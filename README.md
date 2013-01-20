@@ -20,5 +20,8 @@ STATISTICS
 ==========
 URLs found: 200
 URLs visited: 15
+>>>for url in crawler.iter_urls():
+    # do something
+    print url
 
 ```

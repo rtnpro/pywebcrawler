@@ -152,7 +152,7 @@ class WebCrawler(object):
         self.queue.put((self.clean_url(root), 0))
         self.url_fetch = self.URLFetchClass(self.clean_url(root))
         self.urls_visited = set()
-        self.urls_seen = set([root])
+        self.urls_queued = set([root])
         self.urls_visited_count = 0
         self.urls_count = 1
 
@@ -196,7 +196,7 @@ class WebCrawler(object):
                 "Already found %d URLs." % self.max_urls_count)
         return (
             url not in self.urls_visited and
-            url not in self.urls_seen
+            url not in self.urls_queued
         )
 
     def visit_url(self, url, depth):
@@ -213,7 +213,7 @@ class WebCrawler(object):
         self.url_fetch.url = url
         urls = self.url_fetch.get_urls()
         try:
-            self.urls_seen.remove(url)
+            self.urls_queued.remove(url)
         except KeyError:
             pass
         self.urls_visited.add(url)
@@ -223,7 +223,7 @@ class WebCrawler(object):
         for u in urls:
             if self.should_queue_url(u):
                 self.queue.put((self.clean_url(u), child_depth))
-                self.urls_seen.add(u)
+                self.urls_queued.add(u)
                 self.urls_count += 1
 
     def crawl(self):
@@ -254,3 +254,12 @@ class WebCrawler(object):
                 'urls_found': self.urls_count,
                 'urls_visited': self.urls_visited_count}
         )
+
+    def iter_urls(self):
+        """
+        Return an iterator for all unique URLs discovered so far.
+
+        Returns:
+            A iterator of URL strings.
+        """
+        return iter(self.urls_queued.union(self.urls_visited))
