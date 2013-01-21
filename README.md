@@ -16,7 +16,7 @@ Usage
 
 >>>from pywebcrawler import webcrawler
 >>>root_url = 'https://github.com/'
->>>crawler = webcrawler.WebCrawler(root_url, depth_limit=2, max_url_count=200)
+>>>crawler = webcrawler.WebCrawler(root_url, depth_limit=2, max_urls_count=200)
 >>>crawler.crawl()
 Stopping crawling. Reason was:
 Already found 200 URLs.
@@ -42,4 +42,4 @@ URLs visited: 15
 
 ### Command line
 
-1. ``crawler.py http://python.org -d 3 -n 1000 -s=output.json``
+1. ``crawler.py http://python.org -d 3 -n 1000 -s output.json``
