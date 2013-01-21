@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import
-import sys
 import urllib2
 import urlparse
 from . import conf
 from . import storage
+from .log import logger
 from Queue import Queue
 from BeautifulSoup import BeautifulSoup
 
@@ -34,7 +34,7 @@ class UrlFetch(object):
         """
         mimetype = data.info().gettype()
         if mimetype not in conf.ACCEPT_MIMETYPES:
-            print >> sys.stderr, (
+            logger.info(
                 "Ignoring content from %s because it's mimetype: %s is not "
                 "in %s." % (self.url, mimetype, conf.ACCEPT_MIMETYPES))
             return True
@@ -53,19 +53,19 @@ class UrlFetch(object):
             request.add_header("User-Agent", conf.USER_AGENT)
             handle = urllib2.build_opener()
         except IOError as e:
-            print >> sys.stderr, (
+            logger.debug(
                 "There was an error opening page at %s. Error was:\n%s"
                 % (self.url, unicode(e)))
             return None
         try:
             data = handle.open(request)
         except urllib2.HTTPError as e:
-            print >> sys.stderr, (
+            logger.debug(
                 "There was an error opening page at %s. Error was:\n%s"
                 % (self.url, unicode(e)))
             return None
         except urllib2.URLError as e:
-            print >> sys.stderr, (
+            logger.debug(
                 "There was an error opening page at %s. Error was:\n%s"
                 % (self.url, unicode(e)))
             return None
@@ -267,7 +267,10 @@ class WebCrawler(object):
         self.check_depth(child_depth)
         for u in urls:
             if self.should_queue_url(u):
-                self.queue.put((self.clean_url(u), child_depth))
+                u = self.clean_url(u)
+                logger.info("Queuing URL '%s' at depth '%d'."
+                            % (u, child_depth))
+                self.queue.put((u, child_depth))
                 self.urls_queued.add(u)
                 self.urls_count += 1
         # Only if all the filtered URLs in a page are successfully queued,
@@ -287,17 +290,17 @@ class WebCrawler(object):
         try:
             while not self.queue.empty():
                 url, depth = self.queue.get()
-                print >> sys.stderr, (
+                logger.info(
                     "Visiting URL '%s' at depth %d." % (url, depth))
                 self.visit_url(url, depth)
         except StopCrawlingException as e:
-            print >> sys.stderr, (
+            logger.info(
                 "Stopping crawling. Reason was:\n %s" % unicode(e))
         finally:
             self.show_stats()
 
     def show_stats(self):
-        print >> sys.stdout, (
+        logger.info(
             "==========\n"
             "STATISTICS\n"
             "==========\n"
@@ -342,7 +345,7 @@ class WebCrawler(object):
                     self.urls_visited_count)
                 self.reset()
             except storage.StorageDumpException as e:
-                print >> sys.stderr, (
+                logger.error(
                     "Error during dumping crawler data:\n%s" % unicode(e))
 
     def load(self, storage_backend):
@@ -360,6 +363,6 @@ class WebCrawler(object):
             ) = storage_backend.load()
             self.can_dump = True
         except storage.StorageLoadException as e:
-            print >> sys.stderr, (
+            logger.error(
                 "Error during loading crawler data, so resorting to "
                 "initial data:\n%s" % unicode(e))

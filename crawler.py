@@ -3,6 +3,7 @@ import sys
 import optparse
 from pywebcrawler.webcrawler import WebCrawler
 from pywebcrawler.storage import JSONStorageBackend
+from pywebcrawler.log import set_log_level
 
 USAGE = '%prog URL [options]'
 VERSION = '0.1'
@@ -16,6 +17,10 @@ def parse_options():
         args, opts
     """
     parser = optparse.OptionParser(usage=USAGE, version=VERSION)
+
+    parser.add_option("-q", "--quiet", action="store_true", dest="quiet",
+                      default=False,
+                      help="don't print status messages to stdout")
 
     parser.add_option("-d", "--depth", action="store", type="int", default=5,
                       dest="depth_limit", help="Maximum depth to traverse")
@@ -64,6 +69,11 @@ def main():
     allowed = opts.allowed
     load = opts.load
     storage_name = opts.storage_name
+
+    # set log level
+    set_log_level('DEBUG')
+    if opts.quiet:
+        set_log_level('WARNING')
 
     crawler = WebCrawler(root_url, depth_limit=depth_limit,
                          max_urls_count=max_urls_count, allowed=allowed,
