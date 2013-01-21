@@ -50,6 +50,7 @@ class UrlFetch(object):
         """
         try:
             request = urllib2.Request(self.url)
+            request.add_header("User-Agent", conf.USER_AGENT)
             handle = urllib2.build_opener()
         except IOError as e:
             print >> sys.stderr, (
